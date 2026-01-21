@@ -40,7 +40,10 @@ try:
             except:
                 preco = "Sem preço"
             link = elemento.find_element(By.CSS_SELECTOR, '[class="a-link-normal s-no-outline"]').get_attribute('href')
-            nota = elemento.find_element(By.CSS_SELECTOR, 'div[data-cy="reviews-block"]>div>span').text
+            try:
+                nota = elemento.find_element(By.CSS_SELECTOR, 'div[class="a-section a-spacing-none a-spacing-top-micro"]>div>span~span>a').get_attribute('aria-label').split(' ')[0]
+            except:
+                nota = "Sem nota"
             print(f'Título: {titulo} | Preço: {preco} | Nota: {nota}')
             dados = pd.concat([dados, pd.DataFrame({'Título': [titulo], 'Preço': [preco], 'Link': [link], 'Nota': [nota]})], ignore_index=True)
         try:
@@ -58,19 +61,17 @@ data_atual = time.strftime("%d-%m-%Y_%H-%M-%S")
 busca_realizada = f"{busca_realizada}_{data_atual}"
 dados.to_excel(f'{busca_realizada}.xlsx', index=False)
 
-# Adicionar hiperlinks
-
 wb = load_workbook(f'{busca_realizada}.xlsx')
 ws = wb.active
 
 link_column = get_column_letter(3)
 
-for row in range(2, len(dados) + 2):  # começa na linha 2 (pula cabeçalho)
+for row in range(2, len(dados) + 2):
     cell = ws[f'{link_column}{row}']
     link_value = cell.value
     if link_value:
         cell.hyperlink = link_value
-        cell.value = "Clique aqui"  # ou deixe o link visível
+        cell.value = "Clique aqui"
 
 wb.save(f'{busca_realizada}.xlsx')
 
