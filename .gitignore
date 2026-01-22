@@ -1,8 +1,30 @@
-.venv
+# ===== Python =====
 __pycache__/
-*.pyc
-*.xlsx
-*.xls
-.DS_Store
+*.py[cod]
+*$py.class
+
+# ===== Virtualenv =====
+.venv/
+venv/
+env/
+
+# ===== IDE =====
 .vscode/
-*.egg-info/
+.idea/
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+
+# ===== Build / Distribuição (PyInstaller) =====
+build/
+dist/
+*.spec
+
+# ===== Logs e artefatos =====
+*.log
+*.tmp
+
+# ===== Saídas geradas (ex.: planilhas de output) =====
+*.xlsx
+*.csv

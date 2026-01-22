@@ -10,7 +10,7 @@ from openpyxl import load_workbook
 
 chrome_options = webdriver.ChromeOptions()
 chrome_options.add_argument("--start-maximized")
-chrome_options.add_argument("--headless=new")
+# chrome_options.add_argument("--headless=new")
 driver = webdriver.Chrome(options=chrome_options)
 
 
@@ -57,6 +57,7 @@ try:
 except: 
     print("Não há mais páginas.")
 
+driver.quit()
 data_atual = time.strftime("%d-%m-%Y_%H-%M-%S")
 busca_realizada = f"{busca_realizada}_{data_atual}"
 dados.to_excel(f'{busca_realizada}.xlsx', index=False)
@@ -75,4 +76,3 @@ for row in range(2, len(dados) + 2):
 
 wb.save(f'{busca_realizada}.xlsx')
 
-driver.quit()
