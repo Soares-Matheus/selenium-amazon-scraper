@@ -1,0 +1,26 @@
+# Amazon Scraper Configuration
+# Edit this file to change the scraper behaviour without touching the code.
+
+scraper:
+  # Default country to scrape when --country is not provided via CLI.
+  # Supported values: br, us, uk, de, fr, es, it, ca, mx, jp
+  default_country: br
+
+  # Run Chrome without opening a visible window.
+  # NOTE: Amazon actively detects and blocks headless browsers.
+  # Keep this as false unless you have additional bypass measures in place.
+  # Can be overridden at runtime with --no-headless.
+  headless: true 
+
+  # Maximum number of result pages to scrape.
+  # Set to null to scrape all available pages.
+  max_pages: null
+
+  # How long to wait (in seconds) for page elements to appear.
+  timeout: 10
+
+  # Random delay between pages to mimic human behaviour.
+  # The scraper sleeps a random number of seconds between min and max.
+  delay:
+    min: 1.5
+    max: 3.0

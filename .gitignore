@@ -25,6 +25,10 @@ dist/
 *.log
 *.tmp
 
-# ===== Saídas geradas (ex.: planilhas de output) =====
+# ===== Saídas geradas =====
 *.xlsx
 *.csv
+*.docx
+
+# ===== Testes =====
+.pytest_cache/
