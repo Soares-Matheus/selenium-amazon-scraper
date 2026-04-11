@@ -88,7 +88,7 @@ CLI arguments always take priority over `config.yaml` when provided.
 ### Basic — interactive prompt
 ```bash
 python scraper.py
-# -> Enter search term: notebook gamer
+# -> Enter search term: Gaming Laptop
 ```
 
 ### With arguments
