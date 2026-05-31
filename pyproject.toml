@@ -1,0 +1,13 @@
+﻿[project]
+name = "selenium-amazon-scraper"
+version = "0.1.0"
+description = "Multi-country Amazon product scraper with Excel export."
+requires-python = ">=3.11"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Matheus Henrique Soares" }]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra --strict-markers --strict-config"

@@ -14,10 +14,6 @@ import pytest
 from scraper import AmazonScraper, COUNTRIES, load_config
 
 
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
-
 def make_card(title="Test Product", price_whole="1.299", price_fraction="99",
               href="https://amazon.com/dp/B001", aria_label="4.5 de 5 estrelas"):
     """Build a mock Selenium WebElement that mimics an Amazon product card."""
@@ -42,10 +38,6 @@ def make_card(title="Test Product", price_whole="1.299", price_fraction="99",
     card.find_element = find_element
     return card
 
-
-# ---------------------------------------------------------------------------
-# load_config
-# ---------------------------------------------------------------------------
 
 class TestLoadConfig:
     def test_returns_defaults_when_file_missing(self, tmp_path):
@@ -72,10 +64,6 @@ class TestLoadConfig:
         assert config["scraper"]["timeout"] == 10
 
 
-# ---------------------------------------------------------------------------
-# COUNTRIES
-# ---------------------------------------------------------------------------
-
 class TestCountries:
     def test_all_countries_have_required_keys(self):
         for code, data in COUNTRIES.items():
@@ -97,10 +85,6 @@ class TestCountries:
         assert COUNTRIES["us"]["decimal"] == "."
         assert COUNTRIES["us"]["url"] == "https://www.amazon.com"
 
-
-# ---------------------------------------------------------------------------
-# AmazonScraper — init
-# ---------------------------------------------------------------------------
 
 class TestAmazonScraperInit:
     @patch("scraper.webdriver.Chrome")
@@ -127,10 +111,6 @@ class TestAmazonScraperInit:
         assert scraper.delay_max == 5.0
         scraper.quit()
 
-
-# ---------------------------------------------------------------------------
-# AmazonScraper — product extraction
-# ---------------------------------------------------------------------------
 
 class TestGetTitle:
     def test_extracts_title_from_card(self):
@@ -187,10 +167,6 @@ class TestGetRating:
         card.find_element = MagicMock(side_effect=NoSuchElementException)
         assert AmazonScraper._get_rating(card) == "No rating"
 
-
-# ---------------------------------------------------------------------------
-# AmazonScraper — export
-# ---------------------------------------------------------------------------
 
 class TestExportToExcel:
     def test_creates_excel_file(self, tmp_path):

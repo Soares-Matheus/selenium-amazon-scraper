@@ -187,3 +187,14 @@ selenium-amazon-scraper/
 ## Disclaimer
 
 This project is intended for educational and portfolio purposes. Always check a website's Terms of Service and `robots.txt` before scraping.
+
+---
+
+## Related project
+
+This is the **data extraction** side of my Selenium portfolio. The
+companion project [form-filler-automation](https://github.com/Soares-Matheus/form-filler-automation)
+handles the opposite direction — filling data **into** any web form
+via a YAML configuration. Both projects share the same engineering
+style: config-driven, anti-detection enabled, `WebDriverWait`-based,
+and pytest-tested.
