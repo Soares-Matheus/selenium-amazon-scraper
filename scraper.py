@@ -43,7 +43,7 @@ def load_config(path=CONFIG_PATH):
     defaults = {
         "scraper": {
             "default_country": "br",
-            "headless": False,
+            "headless": True,
             "max_pages": None,
             "timeout": 10,
             "delay": {"min": 1.5, "max": 3.0},
