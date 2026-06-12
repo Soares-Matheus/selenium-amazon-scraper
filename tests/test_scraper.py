@@ -10,30 +10,53 @@ from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
+from selenium.common.exceptions import NoSuchElementException
 
 from scraper import AmazonScraper, COUNTRIES, load_config
 
 
-def make_card(title="Test Product", price_whole="1.299", price_fraction="99",
-              href="https://amazon.com/dp/B001", aria_label="4.5 de 5 estrelas"):
-    """Build a mock Selenium WebElement that mimics an Amazon product card."""
+def make_card(title="Test Product", offscreen_price="$599.00",
+              price_whole="1.299", price_fraction="99",
+              asin="B001TEST", rating_text="4.5 out of 5 stars",
+              has_offscreen=True, has_whole=True):
+    """Build a mock Selenium WebElement that mimics a current Amazon card."""
     card = MagicMock()
+    card.get_attribute = MagicMock(
+        side_effect=lambda name: asin if name == "data-asin" else None
+    )
 
     def find_element(by, selector):
-        element = MagicMock()
-        # Link selectors must be checked BEFORE "a-link-normal" title selectors
-        # because the link selector also contains "a-link-normal" in its class string
-        if "s-no-outline" in selector or (selector == "h2 a"):
-            element.get_attribute = MagicMock(return_value=href)
-        elif "a-link-normal" in selector or "h2 a span" in selector:
-            element.text = title
-        elif "a-price-whole" in selector:
-            element.text = price_whole
-        elif "a-price-fraction" in selector:
-            element.text = price_fraction
-        elif "estrelas" in selector or "stars" in selector or "spacing-top-micro" in selector:
-            element.get_attribute = MagicMock(return_value=aria_label)
-        return element
+        el = MagicMock()
+        if selector in ("h2 span", "h2", "[data-cy='title-recipe']"):
+            if title is None:
+                raise NoSuchElementException
+            el.text = title
+            el.get_attribute = MagicMock(return_value=title)
+            return el
+        if "a-offscreen" in selector:
+            if not has_offscreen:
+                raise NoSuchElementException
+            el.text = ""  # hidden text — Selenium .text is empty on purpose
+            el.get_attribute = MagicMock(return_value=offscreen_price)
+            return el
+        if "a-price-whole" in selector:
+            if not has_whole:
+                raise NoSuchElementException
+            el.text = price_whole
+            return el
+        if "a-price-fraction" in selector:
+            el.text = price_fraction
+            return el
+        if ("a-icon-star" in selector or "stars" in selector
+                or "estrelas" in selector or "sur 5" in selector
+                or "von 5" in selector):
+            if rating_text is None:
+                raise NoSuchElementException
+            el.get_attribute = MagicMock(
+                side_effect=lambda n: rating_text if n in ("textContent", "aria-label") else None
+            )
+            return el
+        raise NoSuchElementException
 
     card.find_element = find_element
     return card
@@ -118,53 +141,44 @@ class TestGetTitle:
         assert AmazonScraper._get_title(card) == "Notebook Gamer"
 
     def test_returns_empty_string_when_not_found(self):
-        from selenium.common.exceptions import NoSuchElementException
         card = MagicMock()
         card.find_element = MagicMock(side_effect=NoSuchElementException)
         assert AmazonScraper._get_title(card) == ""
 
 
 class TestGetPrice:
-    def test_formats_price_with_br_currency(self):
-        card = make_card(price_whole="4.299", price_fraction="00")
-        result = AmazonScraper._get_price(card, "R$", ",")
-        assert result == "R$ 4.299,00"
+    def test_uses_offscreen_price_when_available(self):
+        card = make_card(offscreen_price="$599.00")
+        assert AmazonScraper._get_price(card, "$", ".") == "$599.00"
 
-    def test_formats_price_with_us_currency(self):
-        card = make_card(price_whole="1299", price_fraction="99")
-        result = AmazonScraper._get_price(card, "$", ".")
-        assert result == "$ 1299.99"
+    def test_falls_back_to_whole_and_fraction(self):
+        card = make_card(has_offscreen=False, price_whole="4.299", price_fraction="00")
+        assert AmazonScraper._get_price(card, "R$", ",") == "R$ 4.299,00"
 
     def test_returns_no_price_when_not_found(self):
-        from selenium.common.exceptions import NoSuchElementException
-        card = MagicMock()
-        card.find_element = MagicMock(side_effect=NoSuchElementException)
+        card = make_card(has_offscreen=False, has_whole=False)
         assert AmazonScraper._get_price(card, "R$", ",") == "No price"
 
 
 class TestGetLink:
-    def test_extracts_href_from_card(self):
-        card = make_card(href="https://www.amazon.com.br/dp/B001TEST")
-        result = AmazonScraper._get_link(card)
+    def test_builds_link_from_asin(self):
+        card = make_card(asin="B001TEST")
+        result = AmazonScraper._get_link(card, "https://www.amazon.com.br")
         assert result == "https://www.amazon.com.br/dp/B001TEST"
 
-    def test_returns_empty_string_when_not_found(self):
-        from selenium.common.exceptions import NoSuchElementException
-        card = MagicMock()
+    def test_returns_empty_string_when_no_asin_or_anchor(self):
+        card = make_card(asin=None)
         card.find_element = MagicMock(side_effect=NoSuchElementException)
-        assert AmazonScraper._get_link(card) == ""
+        assert AmazonScraper._get_link(card, "https://www.amazon.com") == ""
 
 
 class TestGetRating:
-    def test_extracts_rating_from_aria_label(self):
-        card = make_card(aria_label="4.5 de 5 estrelas")
-        result = AmazonScraper._get_rating(card)
-        assert result == "4.5"
+    def test_extracts_rating_from_icon_alt(self):
+        card = make_card(rating_text="4.5 out of 5 stars")
+        assert AmazonScraper._get_rating(card) == "4.5"
 
     def test_returns_no_rating_when_not_found(self):
-        from selenium.common.exceptions import NoSuchElementException
-        card = MagicMock()
-        card.find_element = MagicMock(side_effect=NoSuchElementException)
+        card = make_card(rating_text=None)
         assert AmazonScraper._get_rating(card) == "No rating"
 
 
@@ -187,7 +201,6 @@ class TestExportToExcel:
         df = pd.read_excel(output)
         assert df.iloc[0]["Title"] == "Product A"
         assert df.iloc[0]["Price"] == "R$ 100,00"
-        # Excel reads numeric-looking strings as float, so compare as string
         assert str(df.iloc[0]["Rating"]) == "4.5"
 
     def test_does_not_create_file_when_no_products(self, tmp_path):

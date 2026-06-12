@@ -10,4 +10,4 @@ authors = [{ name = "Matheus Henrique Soares" }]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
-addopts = "-ra --strict-markers --strict-config"
+addopts = "-ra --strict-markers --strict-config --basetemp=.pytest_basetemp"

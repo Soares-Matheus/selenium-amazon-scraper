@@ -216,46 +216,39 @@ class AmazonScraper:
         return {
             "Title":  title,
             "Price":  self._get_price(card, self.currency, self.decimal_sep),
-            "Link":   self._get_link(card),
+            "Link":   self._get_link(card, self.base_url),
             "Rating": self._get_rating(card),
         }
 
     @staticmethod
     def _get_title(card):
-        selectors = [
-            '[class="a-link-normal s-line-clamp-4 s-link-style a-text-normal"]',
-            '[class="a-link-normal s-line-clamp-2 s-link-style a-text-normal"]',
-            '[class="a-link-normal s-line-clamp-3 s-link-style a-text-normal"]',
-            "h2 a span",
-        ]
+        # Amazon wraps the <a> around the <h2>, so the title text lives in
+        # `h2 span` (or the h2 itself). Exact full-class selectors break on any
+        # markup change, so we rely on the stable h2 structure with fallbacks.
+        selectors = ["h2 span", "h2", "[data-cy='title-recipe']"]
         for selector in selectors:
             try:
-                text = card.find_element(By.CSS_SELECTOR, selector).text.strip()
+                element = card.find_element(By.CSS_SELECTOR, selector)
+                text = (element.text or element.get_attribute("textContent") or "").strip()
                 if text:
                     return text
             except NoSuchElementException:
                 continue
+        try:
+            aria = card.find_element(By.CSS_SELECTOR, "h2").get_attribute("aria-label")
+            if aria:
+                return aria.strip()
+        except NoSuchElementException:
+            pass
         return ""
 
     @staticmethod
-    def _get_price(card, currency, decimal_sep):
-        try:
-            whole = card.find_element(
-                By.CSS_SELECTOR, 'span[class="a-price-whole"]'
-            ).text.strip()
-            fraction = card.find_element(
-                By.CSS_SELECTOR, 'span[class="a-price-fraction"]'
-            ).text.strip()
-            return "{} {}{}{}".format(currency, whole, decimal_sep, fraction)
-        except NoSuchElementException:
-            return "No price"
-
-    @staticmethod
-    def _get_link(card):
-        selectors = [
-            '[class="a-link-normal s-no-outline"]',
-            "h2 a",
-        ]
+    def _get_link(card, base_url):
+        # Most robust: every result card carries the product's ASIN.
+        asin = card.get_attribute("data-asin")
+        if asin:
+            return "{}/dp/{}".format(base_url, asin)
+        selectors = ["h2 a", "a.a-link-normal[href*='/dp/']", "a.a-link-normal.s-link-style"]
         for selector in selectors:
             try:
                 href = card.find_element(By.CSS_SELECTOR, selector).get_attribute("href")
@@ -266,20 +259,52 @@ class AmazonScraper:
         return ""
 
     @staticmethod
+    def _get_price(card, currency, decimal_sep):
+        # Preferred: the fully formatted price Amazon hides in `.a-offscreen`
+        # (e.g. "$599.00"). It is hidden text, so Selenium's `.text` returns "";
+        # read `textContent` instead.
+        try:
+            offscreen = card.find_element(
+                By.CSS_SELECTOR, "span.a-price span.a-offscreen"
+            ).get_attribute("textContent")
+            if offscreen and offscreen.strip():
+                return offscreen.strip()
+        except NoSuchElementException:
+            pass
+        # Fallback: reconstruct from the visible whole + fraction spans.
+        try:
+            whole = card.find_element(By.CSS_SELECTOR, "span.a-price-whole").text.strip()
+            try:
+                fraction = card.find_element(
+                    By.CSS_SELECTOR, "span.a-price-fraction"
+                ).text.strip()
+            except NoSuchElementException:
+                fraction = "00"
+            return "{} {}{}{}".format(currency, whole, decimal_sep, fraction)
+        except NoSuchElementException:
+            return "No price"
+
+    @staticmethod
     def _get_rating(card):
+        # Rating sits in the star icon's alt text ("4.4 out of 5 stars"), which
+        # is hidden (read via textContent), with localized aria-label fallbacks.
         selectors = [
-            'div[class="a-section a-spacing-none a-spacing-top-micro"] > div > span ~ span > a',
-            "span[aria-label*='de 5 estrelas']",
+            "i[class*='a-icon-star'] span.a-icon-alt",
             "span[aria-label*='out of 5 stars']",
+            "span[aria-label*='de 5 estrelas']",
+            "span[aria-label*='sur 5']",
             "span[aria-label*='von 5 Sternen']",
-            "span[aria-label*='sur 5 etoiles']",
         ]
         for selector in selectors:
             try:
                 element = card.find_element(By.CSS_SELECTOR, selector)
-                aria = element.get_attribute("aria-label")
-                if aria:
-                    return aria.split(" ")[0]
+                text = (
+                    element.get_attribute("textContent")
+                    or element.get_attribute("aria-label")
+                    or ""
+                ).strip()
+                if text:
+                    return text.split(" ")[0]
             except NoSuchElementException:
                 continue
         return "No rating"
